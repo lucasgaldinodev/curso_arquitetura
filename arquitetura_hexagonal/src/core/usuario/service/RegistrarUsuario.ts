@@ -1,15 +1,20 @@
 import CasoDeUso from "@/core/shared/CasoDeUso";
-import Usuario from "../model/Usuario";
-import RepositorioUsuarioEmMemoria from "./RepositorioUsuarioEmMemoria";
 import Erros from "@/core/shared/Erros";
 import Id from "@/core/shared/Id";
+import ProvedorCriptografia from "./ProvedorCriptografia";
+import Usuario from "../model/Usuario";
+import RepositorioUsuario from "./RepositorioUsuario";
 
 export default class RegistrarUsuario implements CasoDeUso<Usuario, void> {
-    async executar(usuario: Usuario): Promise<void> {
-        const senhaCripto = usuario.senha.split('').reverse().join('')
-        const repo = new RepositorioUsuarioEmMemoria()
+    constructor(
+        private repositorio: RepositorioUsuario,
+        private provedorCripto: ProvedorCriptografia
+    ) { }
 
-        const usuarioExistente = await repo.buscarPorEmail(usuario.email)
+    async executar(usuario: Usuario): Promise<void> {
+        const senhaCripto = this.provedorCripto.criptografar(usuario.senha)
+
+        const usuarioExistente = await this.repositorio.buscarPorEmail(usuario.email)
         if (usuarioExistente) throw new Error(Erros.USUARIO_JA_EXISTE)
 
         const novoUsuario: Usuario = {
@@ -19,7 +24,6 @@ export default class RegistrarUsuario implements CasoDeUso<Usuario, void> {
             senha: senhaCripto,
         }
 
-        repo.inserir(novoUsuario)
-        console.log(`\n\n${JSON.stringify(novoUsuario)}`)
+        this.repositorio.inserir(novoUsuario)
     }
 }
